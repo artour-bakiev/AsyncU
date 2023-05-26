@@ -5,7 +5,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.common.SignInButton
 
 @Composable
-fun GoogleSignInBlock(onClick: () -> Unit) {
+fun GoogleSignInWidget(onClick: () -> Unit) {
     AndroidView(
         factory = { context ->
             SignInButton(context).apply { setOnClickListener { onClick() } }

@@ -5,8 +5,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 
 interface GoogleAuthenticationService {
     val lastSignedInAccount: GoogleSignInAccount?
-
     val signInIntent: Intent
-
     fun signOut()
 }

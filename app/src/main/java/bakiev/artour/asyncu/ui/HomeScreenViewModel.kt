@@ -6,10 +6,8 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import bakiev.artour.asyncu.services.GoogleAuthenticationService
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
@@ -17,23 +15,36 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.tasks.Task
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 @HiltViewModel
-class MainViewModel @Inject constructor(private val googleAuthenticationService: GoogleAuthenticationService) :
+class HomeScreenViewModel @Inject constructor(private val googleAuthenticationService: GoogleAuthenticationService) :
     ViewModel() {
 
-    var googleSignInAccount: GoogleSignInAccount? by mutableStateOf(googleAuthenticationService.lastSignedInAccount)
-        private set
+    private val _uiState = MutableStateFlow(
+        HomeScreenUiState(account = googleAuthenticationService.lastSignedInAccount)
+    )
+
+    val uiState: StateFlow<HomeScreenUiState>
+        get() = _uiState.asStateFlow()
 
     @Composable
     fun rememberGoogleSignInLauncher() =
-        rememberLauncherForActivityResult(contract = SignInContract(googleAuthenticationService.signInIntent)) {
-            googleSignInAccount = googleAuthenticationService.lastSignedInAccount
+        rememberLauncherForActivityResult(
+            contract = SignInContract(googleAuthenticationService.signInIntent)
+        ) { account ->
+            viewModelScope.launch {
+                _uiState.update { it.copy(account = account ?: throw IllegalArgumentException()) }
+            }
         }
 
     fun googleSingOut() {
         googleAuthenticationService.signOut()
-        googleSignInAccount = googleAuthenticationService.lastSignedInAccount
+        _uiState.update { it.copy(account = null) }
     }
 
     private class SignInContract(private val signInIntent: Intent) :

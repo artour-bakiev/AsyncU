@@ -1,8 +1,9 @@
 package bakiev.artour.asyncu.di
 
 import android.content.Context
-import bakiev.artour.asyncu.services.DefaultGoogleAuthenticationService
+import bakiev.artour.asyncu.services.DefaultGoogleDrive
 import bakiev.artour.asyncu.services.GoogleAuthenticationService
+import bakiev.artour.asyncu.services.GoogleDrive
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -11,8 +12,11 @@ import dagger.hilt.components.SingletonComponent
 
 @Module
 @InstallIn(SingletonComponent::class)
-class AuthenticationModule {
+class GoogleDriveModule {
     @Provides
-    fun provideGoogleAuthenticationService(@ApplicationContext context: Context): GoogleAuthenticationService =
-        DefaultGoogleAuthenticationService(context)
+    fun provideGoogleDrive(
+        @ApplicationContext context: Context,
+        googleAuthenticationService: GoogleAuthenticationService
+    ): GoogleDrive =
+        DefaultGoogleDrive(context, googleAuthenticationService)
 }

@@ -13,8 +13,11 @@ import androidx.compose.ui.Modifier
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 
 @Composable
-fun SingOutBlock(account: GoogleSignInAccount, onClick: () -> Unit) {
+fun GoogleDriveManageWidget(account: GoogleSignInAccount, onManageDrive: () -> Unit, onSignOut: () -> Unit) {
     Column(Modifier.width(IntrinsicSize.Max)) {
+        Button(onClick = onManageDrive) {
+            Text(text = "Drive")
+        }
         Box(
             Modifier
                 .fillMaxWidth()
@@ -23,6 +26,6 @@ fun SingOutBlock(account: GoogleSignInAccount, onClick: () -> Unit) {
         ) {
             Text(text = "Signed as '${account.email}'")
         }
-        Button(onClick = onClick) { Text(text = "Sign Out") }
+        Button(onClick = onSignOut) { Text(text = "Sign Out") }
     }
 }
