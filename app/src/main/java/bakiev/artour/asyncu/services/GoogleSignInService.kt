@@ -7,4 +7,6 @@ interface GoogleSignInService {
     val lastSignInAccount: GoogleSignInAccount?
 
     fun signInContract(): ActivityResultContract<Void?, GoogleSignInAccount?>
+
+    fun signOut()
 }
