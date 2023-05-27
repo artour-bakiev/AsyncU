@@ -3,7 +3,6 @@ package bakiev.artour.asyncu.ui
 import bakiev.artour.asyncu.MainDispatcherRule
 import bakiev.artour.asyncu.services.GoogleDrive
 import bakiev.artour.asyncu.services.MockDispatcherProvider
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.amshove.kluent.shouldBeEqualTo
 import org.junit.Rule
 import org.junit.Test
@@ -11,7 +10,6 @@ import org.mockito.kotlin.mock
 
 class GoogleDriveViewModelTest {
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     @get:Rule
     internal val dispatcherRule = MainDispatcherRule()
 
