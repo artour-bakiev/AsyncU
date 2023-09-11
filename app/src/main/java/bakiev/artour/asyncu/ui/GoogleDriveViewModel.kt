@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import bakiev.artour.asyncu.services.DispatcherProvider
 import bakiev.artour.asyncu.services.GoogleDrive
+import bakiev.artour.asyncu.services.path
 import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -28,8 +29,12 @@ class GoogleDriveViewModel @Inject constructor(
     private val savedState: SavedStateHandle
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(GoogleDriveScreenUiState.initialState)
-    private val currentPath: MutableList<String> = savedState[currentPathKey]
-        ?: mutableListOf<String>().also { it.add(GoogleDrive.rootFolderId) }
+
+    //    private val currentPath: MutableList<GoogleDrive.File> = savedState[currentPathKey]
+//        ?: mutableListOf<GoogleDrive.File>().also { it.add(GoogleDrive.File.root) }
+//        ?: mutableListOf()
+//    private var currentPath: List<String> = savedState[currentPathKey] ?: emptyList()
+    private var currentDir: GoogleDrive.File = savedState[currentDirKey] ?: GoogleDrive.File.root
 
     val uiState: StateFlow<GoogleDriveScreenUiState>
         get() = _uiState.asStateFlow()
@@ -43,55 +48,44 @@ class GoogleDriveViewModel @Inject constructor(
         }
 
     fun loadListOfChildFoldersInCurrentFolder() {
-        loadListOfChildFolders(currentPath.last())
+        loadListOfChildFolders(currentDir)
     }
 
-    fun loadListOfChildFolders(parentFolder: GoogleDrive.File) {
-        parentFolder.changeCurrentPath(currentPath)
-        savedState[currentPathKey] = currentPath
-        loadListOfChildFolders(parentFolder.id)
-    }
+//    fun loadListOfChildFolders(parentFolder: GoogleDrive.File) {
+//        loadListOfChildFolders(parentFolder.id)
+//        parentFolder.changeCurrentPath(currentPath)
+//        savedState[currentPathKey] = currentPath
+//    }
 
-    private fun loadListOfChildFolders(parentFolderId: String) = viewModelScope.launch {
+    fun loadListOfChildFolders(parentFolder: GoogleDrive.File) = viewModelScope.launch {
         _uiState.update { it.copy(isLoading = true) }
-        val directoriesOrConsentIntent = loadFoldersOrGetConsentIntent(parentFolderId)
-        _uiState.update { directoriesOrConsentIntent.createUiState(it) }
+        val newState = loadFoldersOrGetConsentIntent(parentFolder)
+        _uiState.update { newState }
     }
 
-    private suspend fun loadFoldersOrGetConsentIntent(parentFolderId: String): FoldersOrConsentIntent =
+    private suspend fun loadFoldersOrGetConsentIntent(parentFolder: GoogleDrive.File): GoogleDriveScreenUiState =
         withContext(dispatcherProvider.io) {
             try {
-                val files = drive.childFolders(parentFolderId).toMutableList()
-                if (currentPath.size > 1) {
-                    files.add(0, GoogleDrive.File.parentFolder(currentPath[currentPath.size - 2]))
-                }
-                FoldersOrConsentIntent.Folders(files)
+//                val files = drive.childFolders(parentFolderId).toMutableList()
+//                if (currentPath.size > 1) {
+//                    files.add(0, GoogleDrive.File.parentFolder(currentPath[currentPath.size - 2]))
+//                }
+                val files = drive.childFolders(parentFolder)
+                GoogleDriveScreenUiState(
+                    isLoading = false,
+                    consentIntent = null,
+                    folders = files,
+                    path = parentFolder.path()
+                )
             } catch (e: UserRecoverableAuthIOException) {
-                FoldersOrConsentIntent.ConsentIntent(e.intent)
+                GoogleDriveScreenUiState(
+                    isLoading = false,
+                    consentIntent = e.intent,
+                    folders = null,
+                    path = null
+                )
             }
         }
-
-    private sealed class FoldersOrConsentIntent {
-        abstract fun createUiState(uiState: GoogleDriveScreenUiState): GoogleDriveScreenUiState
-
-        data class Folders(val files: List<GoogleDrive.File>) : FoldersOrConsentIntent() {
-            override fun createUiState(uiState: GoogleDriveScreenUiState): GoogleDriveScreenUiState =
-                uiState.copy(
-                    isLoading = false,
-                    folders = files,
-                    consentIntent = null,
-                )
-        }
-
-        data class ConsentIntent(val intent: Intent) : FoldersOrConsentIntent() {
-            override fun createUiState(uiState: GoogleDriveScreenUiState): GoogleDriveScreenUiState =
-                uiState.copy(
-                    isLoading = false,
-                    folders = null,
-                    consentIntent = intent
-                )
-        }
-    }
 
     private class ConsentContract : ActivityResultContract<Intent, Boolean>() {
         override fun createIntent(context: Context, input: Intent): Intent = input
@@ -100,6 +94,6 @@ class GoogleDriveViewModel @Inject constructor(
     }
 
     companion object {
-        private const val currentPathKey = "currentPath"
+        private const val currentDirKey = "currentDirKey"
     }
 }

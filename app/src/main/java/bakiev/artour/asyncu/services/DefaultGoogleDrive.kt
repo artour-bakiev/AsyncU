@@ -25,18 +25,22 @@ class DefaultGoogleDrive(
             .build()
     }
 
-    override fun childFolders(parentFolderId: String): List<GoogleDrive.File> {
+    override fun childFolders(parentFolder: GoogleDrive.File): List<GoogleDrive.File> {
         var pageToken: String? = null
         val files = mutableListOf<GoogleDrive.File>()
         do {
             val result: FileList = drive.files().list()
-                .setQ("'$parentFolderId' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'")
+                .setQ("'${parentFolder.id}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'")
                 .setSpaces("drive")
                 .setFields("nextPageToken, files(id, name)")
                 .setOrderBy("name")
                 .setPageToken(pageToken)
                 .execute()
-            files.addAll(result.files.map { GoogleDrive.File.folder(it.id, it.name) })
+            val parent = parentFolder.parent
+            if (parent != null) {
+                files.add(GoogleDrive.File.parentFolder(parent))
+            }
+            files.addAll(result.files.map { GoogleDrive.File.folder(it.id, it.name, parentFolder) })
             for (file in result.files) {
                 println("Found file: name=${file.name} id=${file.id}")
             }
@@ -44,4 +48,24 @@ class DefaultGoogleDrive(
         } while (pageToken != null)
         return files
     }
+
+//    override fun childFolders(parentFolderId: String?): List<GoogleDrive.File> {
+//        var pageToken: String? = null
+//        val files = mutableListOf<GoogleDrive.File>()
+//        do {
+//            val result: FileList = drive.files().list()
+//                .setQ("'${parentFolderId ?: "root"}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'")
+//                .setSpaces("drive")
+//                .setFields("nextPageToken, files(id, name)")
+//                .setOrderBy("name")
+//                .setPageToken(pageToken)
+//                .execute()
+//            files.addAll(result.files.map { GoogleDrive.File.folder(it.id, it.name) })
+//            for (file in result.files) {
+//                println("Found file: name=${file.name} id=${file.id}")
+//            }
+//            pageToken = result.nextPageToken
+//        } while (pageToken != null)
+//        return files
+//    }
 }
