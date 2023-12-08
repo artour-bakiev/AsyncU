@@ -3,6 +3,7 @@ package bakiev.artour.asyncu.ui
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.runtime.Composable
@@ -26,7 +27,7 @@ class HomeScreenViewModel @Inject constructor(private val googleAuthenticationSe
     ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        HomeScreenUiState(account = googleAuthenticationService.lastSignedInAccount)
+        HomeScreenUiState(account = googleAuthenticationService.lastSignedInAccount, inProgress = false, error = null)
     )
 
     val uiState: StateFlow<HomeScreenUiState>
@@ -34,22 +35,27 @@ class HomeScreenViewModel @Inject constructor(private val googleAuthenticationSe
 
     @Composable
     fun rememberGoogleSignInLauncher() =
-        rememberLauncherForActivityResult(
-            contract = SignInContract(googleAuthenticationService.signInIntent)
-        ) { account ->
+        rememberLauncherForActivityResult(SignInContract(googleAuthenticationService.signInIntent)) { account ->
             viewModelScope.launch {
-                _uiState.update { it.copy(account = account ?: throw IllegalArgumentException()) }
+                _uiState.update {
+                    it.copy(account = account)
+                }
             }
         }
 
+    fun googleSignIn(launcher: ManagedActivityResultLauncher<Void, GoogleSignInAccount?>) {
+        viewModelScope.launch { _uiState.update { it.copy(inProgress = true) } }
+        launcher.launch(null)
+    }
+
     fun googleSingOut() {
         googleAuthenticationService.signOut()
-        _uiState.update { it.copy(account = null) }
+        viewModelScope.launch { _uiState.update { it.clearGoogleAccount() } }
     }
 
     private class SignInContract(private val signInIntent: Intent) :
-        ActivityResultContract<Void?, GoogleSignInAccount?>() {
-        override fun createIntent(context: Context, input: Void?): Intent = signInIntent
+        ActivityResultContract<Void, GoogleSignInAccount?>() {
+        override fun createIntent(context: Context, input: Void): Intent = signInIntent
 
         override fun parseResult(resultCode: Int, intent: Intent?): GoogleSignInAccount? =
             if (resultCode == Activity.RESULT_OK) {

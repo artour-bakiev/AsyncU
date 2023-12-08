@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,16 +30,25 @@ fun HomeScreen(navController: NavHostController, viewModel: HomeScreenViewModel 
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                val account = uiState.account
-                if (account == null) {
-                    val launcher = viewModel.rememberGoogleSignInLauncher()
-                    GoogleSignInWidget { launcher.launch(null) }
-                } else {
-                        GoogleDriveManageWidget(
-                            account,
-                            onManageDrive = { navController.navigate(Routes.GoogleDrive.route) },
-                            onSignOut = { viewModel.googleSingOut() }
-                        )
+                val error = uiState.error
+                when {
+                    error != null -> Text(text = error)
+                    uiState.inProgress -> CircularProgressIndicator()
+                    else -> {
+                        val account = uiState.account
+                        if (account == null) {
+                            val launcher = viewModel.rememberGoogleSignInLauncher()
+                            GoogleSignInWidget {
+                                viewModel.googleSignIn(launcher)
+                            }
+                        } else {
+                            GoogleDriveManageWidget(
+                                account,
+                                onManageDrive = { navController.navigate(Routes.GoogleDrive.route) },
+                                onSignOut = { viewModel.googleSingOut() }
+                            )
+                        }
+                    }
                 }
             }
             Box(Modifier.weight(1f))
